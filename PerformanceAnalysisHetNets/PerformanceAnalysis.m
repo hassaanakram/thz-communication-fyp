@@ -1,7 +1,7 @@
 clc; close all; clear;
 %% Get and check Base station position distributions.
 xMax =  1; yMax = 1;
-iterations = 2;
+iterations = 20;
 sum = zeros(3,1);
 
 for i=1:iterations
