@@ -9,6 +9,7 @@ uLoS = 5; uNLoS = 1;
 Area = 250000; % squared metres
 NF = 9; % dB
 K = 200;
+alpha = 0.5;
 beta = 3;
 hUAV = 30; % UAV Height in metres
 kF = 0.0033; % m^-1
@@ -18,10 +19,11 @@ xMax =  500; yMax = 500;
 iterations = 20;
 sum = zeros(3,1);
 
-positionUE = getUEPositions(10, xMax, yMax);
-positionUE
 
 for i=1:iterations
+    
+    positionUE = getUEPositions(10, xMax, yMax);
+    
     [numStations, positionStations] = getBSPositions([1 20 3], xMax, yMax);
     out = sprintf('------Trial %d------\nMBSs: %d\nSCs: %d\nUAVs: %d\n',...
                                                    i,...
@@ -47,6 +49,8 @@ for i=1:iterations
 %     hold on;
 %     pos_UE=positionUE;
 %     scatter(pos_UE(:,1),pos_UE(:,2),'r*');
+
+    
 end
 
 average = sum./iterations;
