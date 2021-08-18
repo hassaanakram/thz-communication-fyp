@@ -1,5 +1,6 @@
-function [positionsUE] = getUEPositions(number, xMax, yMax)
+function [numberUE, positionsUE] = getUEPositions(lambda, xMax, yMax)
 %% getUEPositions
-positionsUE = [rand(number, 1).*xMax, rand(number, 1).*yMax];
+numberUE = poissrnd(lambda);
+positionsUE = [rand(numberUE, 1).*xMax, rand(numberUE, 1).*yMax];
 end
 

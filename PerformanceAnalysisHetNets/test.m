@@ -14,6 +14,11 @@ beta = 3;
 hUAV = 30; % UAV Height in metres
 kF = 0.0033; % m^-1
 
+%% EFFECTIVE RATE COVERAGE PROBABILTY VS RATE THRESHOLD
+% Placing base stations and users
+[numberStations, positionStations] = getBSPositions([1,20,3], 500, 500);
+[positionUsers] = getUEPositions(
+=======
 %% Get and check Base station position distributions.
 xMax =  500; yMax = 500;
 iterations = 20;
@@ -64,4 +69,3 @@ out = sprintf('-----Average-----\nMBS: %f\nSC: %f\nUAV: %f\n', average(1),...
                                                                average(2),...
                                                                average(3));
 disp (out);
-
