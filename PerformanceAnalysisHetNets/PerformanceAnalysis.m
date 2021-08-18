@@ -1,7 +1,7 @@
 clc; close all; clear;
 %% Get and check Base station position distributions.
 xMax =  1; yMax = 1;
-iterations = 30;
+iterations = 20;
 sum = zeros(3,1);
 
 for i=1:iterations
@@ -17,18 +17,16 @@ for i=1:iterations
     sum(3) = sum(3) + numStations('UAV');
     
     
-    % Plotting positions
-%     figure('Name', 'Positions of MBS')
-%     pos = positionStations('MBS');
-%     scatter(pos{1}, pos{2}, 'ro'); 
-% 
-%     figure('Name', 'Positions of SC')
-%     pos = positionStations('SC');
-%     scatter(pos{1}, pos{2}, 'k+'); 
-% 
-%     figure('Name', 'Positions of UAV')
-%     pos = positionStations('UAV');
-%     scatter(pos{1}, pos{2}, 'b*'); 
+    %Plotting positions
+    figure('Name', 'Positions of MBS, SC, UAV')
+    pos_MBS = positionStations('MBS');
+    scatter(pos_MBS{1}, pos_MBS{2}, 'ro'); 
+    hold on;
+    pos_SC = positionStations('SC');
+    scatter(pos_SC{1}, pos_SC{2}, 'k+'); 
+    hold on;
+    pos_UAV = positionStations('UAV');
+    scatter(pos_UAV{1}, pos_UAV{2}, 'b*'); 
 end
 
 average = sum./iterations;

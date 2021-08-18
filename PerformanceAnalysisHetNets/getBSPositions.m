@@ -11,9 +11,9 @@ lambda('UAV') = lambdas(3);
 area = xMax*yMax;
 % Number of various tier base stations
 numberStations = containers.Map;
-numberStations('MBS') = poissrnd(lambda('MBS')*area);
-numberStations('SC') = poissrnd(lambda('SC')*area);
-numberStations('UAV') = poissrnd(lambda('UAV')*area);
+numberStations('MBS') = poissrnd(lambda('MBS'));
+numberStations('SC') = poissrnd(lambda('SC'));
+numberStations('UAV') = poissrnd(lambda('UAV'));
 
 % Random coordinates of stations. Using cartesian coordinates.
 % x will be sampled between [0, xMax] and y between [0, yMax]
