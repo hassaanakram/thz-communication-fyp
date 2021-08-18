@@ -13,3 +13,7 @@ beta = 3;
 hUAV = 30; % UAV Height in metres
 kF = 0.0033; % m^-1
 
+%% EFFECTIVE RATE COVERAGE PROBABILTY VS RATE THRESHOLD
+% Placing base stations and users
+[numberStations, positionStations] = getBSPositions([1,20,3], 500, 500);
+[positionUsers] = getUEPositions(
