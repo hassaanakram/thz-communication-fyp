@@ -16,9 +16,8 @@ kF = 0.0033; % m^-1
 
 %% EFFECTIVE RATE COVERAGE PROBABILTY VS RATE THRESHOLD
 % Placing base stations and users
-[numberStations, positionStations] = getBSPositions([1,20,3], 500, 500);
-[positionUsers] = getUEPositions(
-=======
+% [numberStations, positionStations] = getBSPositions([1,20,3], 500, 500);
+% [positionUsers] = getUEPositions(10,500,500)
 %% Get and check Base station position distributions.
 xMax =  500; yMax = 500;
 iterations = 20;
@@ -27,7 +26,7 @@ sum = zeros(3,1);
 
 for i=1:iterations
     
-    positionUE = getUEPositions(10, xMax, yMax);
+    [numberUser,positionUE] = getUEPositions(10, xMax, yMax);
     
     [numStations, positionStations] = getBSPositions([1 20 3], xMax, yMax);
     out = sprintf('------Trial %d------\nMBSs: %d\nSCs: %d\nUAVs: %d\n',...
