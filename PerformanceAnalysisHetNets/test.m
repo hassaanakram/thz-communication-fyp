@@ -37,20 +37,26 @@ for i=1:iterations
     
     
     %Plotting positions
-%     figure('Name', 'Positions of MBS, SC, UAV')
-%     pos_MBS = positionStations('MBS');
-%     scatter(pos_MBS{1}, pos_MBS{2}, 'ro'); 
-%     hold on;
-%     pos_SC = positionStations('SC');
-%     scatter(pos_SC{1}, pos_SC{2}, 'k+'); 
-%     hold on;
-%     pos_UAV = positionStations('UAV');
-%     scatter(pos_UAV{1}, pos_UAV{2}, 'b*');
-%     hold on;
-%     pos_UE=positionUE;
-%     scatter(pos_UE(:,1),pos_UE(:,2),'r*');
+    figure('Name', 'Positions of MBS, SC, UAV')
+      pos_MBS = positionStations('MBS');
+      pos_MBS_data = cell2mat(pos_MBS);
+      scatter(pos_MBS{1}, pos_MBS{2}, 'ro'); 
+      hold on;
+      
+      pos_SC = positionStations('SC');
+      pos_SC_data = cell2mat(pos_SC);
+      scatter(pos_SC{1}, pos_SC{2}, 'k+'); 
+      hold on;
+      
+      pos_UAV = positionStations('UAV');
+      pos_UAV_data = cell2mat(pos_UAV);
+      scatter(pos_UAV{1}, pos_UAV{2}, 'b*');
+      hold on;
+      scatter(positionUE(:,1),positionUE(:,2),'r*');
 
-    
+    distanceUserMBS = distance(positionUE(:,1),positionUE(:,2),pos_MBS_data(:,1),pos_MBS_data(:,2));
+    distanceUserSC = distance(positionUE(:,1),positionUE(:,2),pos_SC_data(:,1),pos_SC_data(:,2));
+    distanceUserUAV = distance(positionUE(:,1),positionUE(:,2),pos_UAV_data(:,1),pos_UAV_data(:,2));
 end
 
 average = sum./iterations;
