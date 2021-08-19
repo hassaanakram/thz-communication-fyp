@@ -1,12 +1,12 @@
 clc; close all; clear;
 %% Get and check Base station position distributions.
 iterations = 1;
-sum = zeros(4,1);
+sum = zeros(2,1);
 
 % DEFINING PARAMETRES
 fMBS = 2.4E9; fUAV = 2.4E9; fTHF = 0.3E12; % Hz
 bMBS = 20E6; bUAV = 20E6; bSC = 10E9; % Hz
-PtMBS = 40; PtUAV = 30; PtSC = 20; % dBM
+PtMBS = 40; PtUAV = 30; PtSC = 20; Pr = 1; % dBM
 b = 0.11; a = 9;
 uLoS = 5; uNLoS = 1;
 Area = 250000; % squared metres
@@ -21,37 +21,55 @@ lambdaUE = 87;
 
 for i=1:iterations
     % Get Base Stations and UEs
-    [numStations, positionStations] = getBSPositions([1 20 3], xMax, yMax);
+    [numStations, positionStations] = getBSPositions(["MBS"],...
+                                                    [2], xMax, yMax);
     [numUE, positionUE] = getUEPositions(lambdaUE, xMax, yMax);
+    
     out = sprintf('------Trial %d------\nUE: %d\nMBSs: %d\nSCs: %d\nUAVs: %d\n',...
                                                    i,...
                                                    numUE,...
-                                                   numStations('MBS'),...
-                                                   numStations('SC'),...
-                                                   numStations('UAV'));
+                                                   numStations('MBS'));
+                                                   %numStations('SC'),...
+                                                   %numStations('UAV'));
     disp (out);  
     
     sum(1) = sum(1) + numStations('MBS');
-    sum(2) = sum(2) + numStations('SC');
-    sum(3) = sum(3) + numStations('UAV');
-    sum(4) = sum(4) + numUE;
+    %sum(2) = sum(2) + numStations('SC');
+    %sum(3) = sum(3) + numStations('UAV');
+    sum(2) = sum(2) + numUE;
 
     
     %Plotting positions
-    figure('Name', 'Positions of MBS, SC, UAV, and UE')
-    posMBS = positionStations('MBS');
-    scatter(posMBS{1}, posMBS{2}, 'ro'); 
-    hold on;
-    posSC = positionStations('SC');
-    scatter(posSC{1}, posSC{2}, 'k+'); 
-    hold on;
-    posUAV = positionStations('UAV');
-    scatter(posUAV{1}, posUAV{2}, 'b*'); 
-    hold on;
-    scatter(positionUE(:,1), positionUE(:,2), 'md'); 
-    legend('MBS', 'SC', 'UAV', 'UE');
+    plotEquipment(positionStations, 0);
     
-    % Calculating Effective Rate coverage
+    %% TARGET: GET THE USERS WHO ARE WITHIN COVERAGE
+    % STEP 1: CALCULATE PATH LOSS FOR EACH TIER
+    % MBS
+    shadowing = random('Lognormal', 0, 5, numUE, 1);
+    posMBS = cell2mat(positionStations('MBS'));
+    distance = getDistance(positionUE, posMBS);
+    PL_MBS = pathLossMBS(fMBS, beta, distance, shadowing);
+    
+    % STEP 2: GET RECEIVED POWER AT EACH UE
+    fading = nakagami(1, numUE);
+    gain = 1000; % Assuming directional antenna gain to be 10 (dBm)
+    receivedPowerMBS = receivedPower(PtMBS, gain, fading, PL_MBS);
+    
+    % STEP 3: CHECK RECEIVED POWER AGAINST THRESHOLD
+    inRangeUE = positionUE(receivedPowerMBS >= Pr, :);
+    outOfRangeUE = positionUE(receivedPowerMBS < Pr, :);
+    
+    % Plotting
+    figure('Name', 'In Range and Out of Range UE');
+    scatter(inRangeUE(:,1), inRangeUE(:,2), 'gd');
+    hold on
+    scatter(outOfRangeUE(:,1), outOfRangeUE(:,2), 'rd');
+    hold on
+    scatter(posMBS(:,1), posMBS(:,2), 'ko');
+    hold off
+    legend('In Range', 'Out of Range', 'MBS');
+    
+    %% CALCULATING DATARATE AT EACH IN RANGE UE
     
 end
 
