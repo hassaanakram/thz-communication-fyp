@@ -1,5 +1,5 @@
 clc; close all; clear;
-%% Get and check Base station position distributions.
+% DEFINE VARIABLES
 iterations = 1;
 sum = zeros(4,1);
 
@@ -42,34 +42,35 @@ for i=1:iterations
     plotEquipment(positionStations, 0);
     
     %% TARGET: GET THE USERS WHO ARE WITHIN COVERAGE
+    receivedPowers = zeros(numUE, 3); 
     % STEP 1: CALCULATE PATH LOSS FOR EACH TIER
     % MBS
         shadowing = random('Lognormal', 0, 5, numUE, 1);
-        posMBS = cell2mat(positionStations('MBS'));
+        posMBS = positionStations('MBS');
         distance = getDistance(positionUE, posMBS);
         PL_MBS = pathLossMBS(fMBS, beta, distance, shadowing);
 
         % STEP 2: GET RECEIVED POWER AT EACH UE
         fading = nakagami(1, numUE);
-        gain = 1000; % Assuming directional antenna gain to be 10 (dBm)
-        receivedPowerMBS = receivedPower(PtMBS, 0, 0, PL_MBS);
+        gain = 0; % Assuming directional antenna gain for MBS: 0
+        receivedPowers(:,1) = receivedPower(PtMBS, gain, fading, PL_MBS);
 
         % STEP 3: CHECK RECEIVED POWER AGAINST THRESHOLD
-        inRangeUE = positionUE(receivedPowerMBS >= Pr, :);
-        outOfRangeUE = positionUE(receivedPowerMBS < Pr, :);
+        %inRangeUE = positionUE(receivedPowerMBS >= Pr, :);
+        %outOfRangeUE = positionUE(receivedPowerMBS < Pr, :);
 
         % Plotting
-        figure('Name', 'In Range and Out of Range UE');
-        scatter(inRangeUE(:,1), inRangeUE(:,2), 'gd');
-        hold on
-        scatter(outOfRangeUE(:,1), outOfRangeUE(:,2), 'rd');
-        hold on
-        scatter(posMBS(:,1), posMBS(:,2), 'ko');
-        hold off
-        legend('In Range', 'Out of Range', 'MBS');
+%         figure('Name', 'In Range and Out of Range UE');
+%         scatter(inRangeUE(:,1), inRangeUE(:,2), 'gd');
+%         hold on
+%         scatter(outOfRangeUE(:,1), outOfRangeUE(:,2), 'rd');
+%         hold on
+%         scatter(posMBS(:,1), posMBS(:,2), 'ko');
+%         hold off
+%         legend('In Range', 'Out of Range', 'MBS');
     
     % SC
-        posSC = cell2mat(positionStations('SC'));
+        posSC = positionStations('SC');
         distance = getDistance(positionUE, posSC);
         absorbtion = pathLossSCAbsorbtion(distance);
         spread = pathLossSCSpread(fTHz,distance);
@@ -77,29 +78,28 @@ for i=1:iterations
 
         % STEP 2: GET RECEIVED POWER AT EACH UE
         fading = nakagami(1, numUE);
-        gain = 1000; % Assuming directional antenna gain to be 10 (dBm)
-        receivedPowerSC = receivedPower(PtMBS, gain, fading, PL_SC);
+        gain = 25; % Assuming directional antenna gain to be 25 (dBm)
+        receivedPowers(:,2) = receivedPower(PtSC, gain, fading, PL_SC);
 
         % STEP 3: CHECK RECEIVED POWER AGAINST THRESHOLD
-        inRangeUE_SC = positionUE(receivedPowerSC >= Pr, :);
-        outOfRangeUE_SC = positionUE(receivedPowerSC < Pr, :);
+        %inRangeUE_SC = positionUE(receivedPowerSC >= Pr, :);
+        %outOfRangeUE_SC = positionUE(receivedPowerSC < Pr, :);
 
         % Plotting
-        figure('Name', 'In Range and Out of Range UE');
-        scatter(inRangeUE_SC(:,1), inRangeUE_SC(:,2), 'gd');
-        hold on
-        scatter(outOfRangeUE_SC(:,1), outOfRangeUE_SC(:,2), 'rd');
-        hold on
-        scatter(posSC(:,1), posSC(:,2), 'ko');
-        hold off
-        legend('In Range', 'Out of Range', 'SC');
+%         figure('Name', 'In Range and Out of Range UE');
+%         scatter(inRangeUE_SC(:,1), inRangeUE_SC(:,2), 'gd');
+%         hold on
+%         scatter(outOfRangeUE_SC(:,1), outOfRangeUE_SC(:,2), 'rd');
+%         hold on
+%         scatter(posSC(:,1), posSC(:,2), 'ko');
+%         hold off
+%         legend('In Range', 'Out of Range', 'SC');
     % UAV
-        posUAV = cell2mat(positionStations('UAV'));
+        posUAV = positionStations('UAV');
         distance = getDistance(positionUE, posUAV);
-        
         phiUAV = phiUAV(hUAV,distance);
         probabilityLOS_UAV = probabilityLOS_UAV(a,b,phiUAV);
-%       probabilityLOS_UAV = probabilityLOS_UAV';
+        
         FSPL = fspl(fUAV,distance);
         pathLoss_LOS=5;
         pathLoss_NLOS=5;
@@ -107,24 +107,31 @@ for i=1:iterations
 
         % STEP 2: GET RECEIVED POWER AT EACH UE
         fading = nakagami(1, numUE);
-        gain = 1000; % Assuming directional antenna gain to be 10 (dBm)
-        receivedPowerUAV = receivedPower(PtMBS, gain, fading, PL_UAV(:,1));
+        gain = 20; % Assuming directional antenna gain to be 10 (dBm)
+        receivedPowers(:,3) = receivedPower(PtMBS, gain, fading, PL_UAV(:,1));
 
         % STEP 3: CHECK RECEIVED POWER AGAINST THRESHOLD
-        inRangeUE_SC = positionUE(receivedPowerUAV >= Pr, :);
-        outOfRangeUE_SC = positionUE(receivedPowerUAV < Pr, :);
+        %inRangeUE_SC = positionUE(receivedPowerUAV >= Pr, :);
+        %outOfRangeUE_SC = positionUE(receivedPowerUAV < Pr, :);
 
         % Plotting
-        figure('Name', 'In Range and Out of Range UE');
-        scatter(inRangeUE_SC(:,1), inRangeUE_SC(:,2), 'gd');
-        hold on
-        scatter(outOfRangeUE_SC(:,1), outOfRangeUE_SC(:,2), 'rd');
-        hold on
-        scatter(posSC(:,1), posSC(:,2), 'ko');
-        hold off
-        legend('In Range', 'Out of Range', 'UAV');
+%         figure('Name', 'In Range and Out of Range UE');
+%         scatter(inRangeUE_SC(:,1), inRangeUE_SC(:,2), 'gd');
+%         hold on
+%         scatter(outOfRangeUE_SC(:,1), outOfRangeUE_SC(:,2), 'rd');
+%         hold on
+%         scatter(posSC(:,1), posSC(:,2), 'ko');
+%         hold off
+%         legend('In Range', 'Out of Range', 'UAV');
 
-    %% CALCULATING DATARATE AT EACH IN RANGE UE
+    %% GET MAX POWER AT EACH UE AND CORRESPONDING BS
+    userBSAssociation = containers.Map;
+    [bestPower, bestBS] = max(receivedPowers, [], 2);
+    userBSAssociation('MBS') = positionUE(bestBS==1, :);
+    userBSAssociation('SC') = positionUE(bestBS==2, :);
+    userBSAssociation('UAV') = positionUE(bestBS==3, :);
+    
+    plotEquipment(userBSAssociation, 0);
     
 end
 
