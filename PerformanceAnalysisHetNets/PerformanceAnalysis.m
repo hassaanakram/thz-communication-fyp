@@ -1,7 +1,7 @@
 clc; close all; clear;
 %% Get and check Base station position distributions.
 iterations = 1;
-sum = zeros(2,1);
+sum = zeros(4,1);
 
 % DEFINING PARAMETRES
 fMBS = 2.4E9; fUAV = 2.4E9; fTHz = 0.3E12; % Hz
@@ -21,7 +21,7 @@ lambdaUE = 87;
 
 for i=1:iterations
     % Get Base Stations and UEs
-    [numStations, positionStations] = getBSPositions(["MBS","SC",'UAV'],...
+    [numStations, positionStations] = getBSPositions(["MBS","SC","UAV"],...
                                                     [2,40,50], xMax, yMax);
     [numUE, positionUE] = getUEPositions(lambdaUE, xMax, yMax);
     
@@ -32,10 +32,10 @@ for i=1:iterations
                                                    
     disp (out);  
     
-%     sum(1) = sum(1) + numStations('MBS');
-%     %sum(2) = sum(2) + numStations('SC');
-%     %sum(3) = sum(3) + numStations('UAV');
-%     sum(2) = sum(2) + numUE;
+    sum(1) = sum(1) + numStations('MBS');
+    sum(2) = sum(2) + numStations('SC');
+    sum(3) = sum(3) + numStations('UAV');
+    sum(2) = sum(2) + numUE;
 
     
     %Plotting positions
