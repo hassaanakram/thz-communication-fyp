@@ -93,6 +93,37 @@ for i=1:iterations
         scatter(posSC(:,1), posSC(:,2), 'ko');
         hold off
         legend('In Range', 'Out of Range', 'SC');
+    % UAV
+        posUAV = cell2mat(positionStations('UAV'));
+        distance = getDistance(positionUE, posUAV);
+        
+        phiUAV = phiUAV(hUAV,distance);
+        probabilityLOS_UAV = probabilityLOS_UAV(a,b,phiUAV);
+%       probabilityLOS_UAV = probabilityLOS_UAV';
+        FSPL = fspl(fUAV,distance);
+        pathLoss_LOS=5;
+        pathLoss_NLOS=5;
+        PL_UAV = pathLossUAV(FSPL,probabilityLOS_UAV,pathLoss_LOS,pathLoss_NLOS);
+
+        % STEP 2: GET RECEIVED POWER AT EACH UE
+        fading = nakagami(1, numUE);
+        gain = 1000; % Assuming directional antenna gain to be 10 (dBm)
+        receivedPowerUAV = receivedPower(PtMBS, gain, fading, PL_UAV(:,1));
+
+        % STEP 3: CHECK RECEIVED POWER AGAINST THRESHOLD
+        inRangeUE_SC = positionUE(receivedPowerUAV >= Pr, :);
+        outOfRangeUE_SC = positionUE(receivedPowerUAV < Pr, :);
+
+        % Plotting
+        figure('Name', 'In Range and Out of Range UE');
+        scatter(inRangeUE_SC(:,1), inRangeUE_SC(:,2), 'gd');
+        hold on
+        scatter(outOfRangeUE_SC(:,1), outOfRangeUE_SC(:,2), 'rd');
+        hold on
+        scatter(posSC(:,1), posSC(:,2), 'ko');
+        hold off
+        legend('In Range', 'Out of Range', 'UAV');
+
     %% CALCULATING DATARATE AT EACH IN RANGE UE
     
 end
