@@ -24,7 +24,11 @@ else
     figure;
     for i = 1:size(dictPos, 1)
         key = keys{i};
-        pos = cell2mat(dictPos(key));
+        
+        pos = dictPos(key);
+        if size(pos,2) ~= 2
+            continue
+        end
         scatter(pos(:,1), pos(:,2), plotShapes(i));
         hold on
     end
