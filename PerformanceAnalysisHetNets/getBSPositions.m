@@ -18,8 +18,8 @@ end
 % x will be sampled between [0, xMax] and y between [0, yMax]
 positionStations = containers.Map;
 for i = 1:length(types)
-positionStations(types(i)) = {rand(numberStations(types(i)), 1)*xMax,...
-                           rand(numberStations(types(i)), 1)*yMax};
+positionStations(types(i)) = [rand(numberStations(types(i)), 1)*xMax,...
+                           rand(numberStations(types(i)), 1)*yMax];
 end
 end
 
