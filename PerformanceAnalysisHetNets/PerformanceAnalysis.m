@@ -1,57 +1,55 @@
 clc; close all; clear;
 % DEFINE VARIABLES
-iterations = 1;
+iterations = 300;
 sum = zeros(4,1);
 
 % DEFINING PARAMETRES
 fMBS = 2.4E9; fUAV = 2.4E9; fTHz = 0.3E12; % Hz
 bMBS = 20E6; bUAV = 20E6; bSC = 10E9; % Hz
-PtMBS = 40; PtUAV = 30; PtSC = 20; Pr = 1; % dBM
+PtMBS = dBmTodB(40); PtUAV = dBmTodB(30); PtSC = dBmTodB(20); Pr = 1; % dB
 b = 0.11; a = 9;
 uLoS = 5; uNLoS = 1;
-Area = 250000; % squared metres
+alphaN = 3.3; alphaL = 2;
+Area = 25000; % squared metres
 xMax = 500; yMax = 500;
 NF = 9; % dB
 K = 200;
-alpha = 0.5;
+alphaRange = linspace(0,1,iterations); 
+rateRange = linspace(1E0, 1E9, iterations);
 beta = 3;
-hUAV = 30; % UAV Height in metres
+hUAVRange = linspace(10,40,iterations); % UAV Height in metres
 kF = 0.0033; % m^-1
 lambdaUE = 87;
 
-for i=1:iterations
-    % Get Base Stations and UEs
-    [numStations, positionStations] = getBSPositions(["MBS","SC","UAV"],...
-                                                    [2,40,50], xMax, yMax);
-    [numUE, positionUE] = getUEPositions(lambdaUE, xMax, yMax);
-    
-    out = sprintf('------Trial %d------\nUE: %d\nMBSs: %d\nSCs: %d\nUAVs: %d\n',...
-                                                   i,...
-                                                   numUE,...
-                                                   numStations('MBS'),numStations('SC'),numStations('UAV'));
-                                                   
-    disp (out);  
-    
-    sum(1) = sum(1) + numStations('MBS');
-    sum(2) = sum(2) + numStations('SC');
-    sum(3) = sum(3) + numStations('UAV');
-    sum(2) = sum(2) + numUE;
+% Get Base Stations and UEs
+[numStations, positionStations] = getBSPositions(["MBS","SC","UAV"],...
+                                                    [100,13000,1500], xMax, yMax);
+[numUE, positionUE] = getUEPositions(lambdaUE, xMax, yMax);
 
+out = sprintf('------Trial %d------\nUE: %d\nMBSs: %d\nSCs: %d\nUAVs: %d\n',...
+                                                i,...
+                                                numUE,...
+                                                numStations('MBS'),numStations('SC'),numStations('UAV'));
+disp (out);
+for i=1:iterations
+    % Set sim params
+    hUAV =30; alpha = 0.5;
+    rateThreshold = rateRange(i);
     
     %Plotting positions
-    plotEquipment(positionStations, 0);
-    
+    %plotEquipment(positionStations, 0);
+
     %% TARGET: GET THE USERS WHO ARE WITHIN COVERAGE
     receivedPowers = zeros(numUE, 3); 
     % STEP 1: CALCULATE PATH LOSS FOR EACH TIER
     % MBS
-        shadowing = random('Lognormal', 0, 5, numUE, 1);
+        shadowing = 10.*log10(random('Lognormal', 0, 5, numUE, 1));
         posMBS = positionStations('MBS');
         distance = getDistance(positionUE, posMBS);
         PL_MBS = pathLossMBS(fMBS, beta, distance, shadowing);
 
         % STEP 2: GET RECEIVED POWER AT EACH UE
-        fading = nakagami(1, numUE);
+        fading = nakagami(uNLoS, numUE); % to convert to dBm
         gain = 0; % Assuming directional antenna gain for MBS: 0
         receivedPowers(:,1) = receivedPower(PtMBS, gain, fading, PL_MBS);
 
@@ -77,8 +75,8 @@ for i=1:iterations
         PL_SC = pathLossSC(absorbtion,spread);
 
         % STEP 2: GET RECEIVED POWER AT EACH UE
-        fading = nakagami(1, numUE);
-        gain = 25; % Assuming directional antenna gain to be 25 (dBm)
+        fading = nakagami(uLoS, numUE);
+        gain = dBmTodB(40); % Assuming directional antenna gain to be 40 (dBm)
         receivedPowers(:,2) = receivedPower(PtSC, gain, fading, PL_SC);
 
         % STEP 3: CHECK RECEIVED POWER AGAINST THRESHOLD
@@ -97,17 +95,17 @@ for i=1:iterations
     % UAV
         posUAV = positionStations('UAV');
         distance = getDistance(positionUE, posUAV);
-        phiUAV = phiUAV(hUAV,distance);
-        probabilityLOS_UAV = probabilityLOS_UAV(a,b,phiUAV);
+        phiUAV_val = phiUAV(hUAV,distance);
+        probabilityLoSUAV = probabilityLOS_UAV(a,b,phiUAV_val);
         
         FSPL = fspl(fUAV,distance);
-        pathLoss_LOS=5;
-        pathLoss_NLOS=5;
-        PL_UAV = pathLossUAV(FSPL,probabilityLOS_UAV,pathLoss_LOS,pathLoss_NLOS);
+        pathLoss_LOS = 10.*alphaL.*log10(distance);
+        pathLoss_NLOS = 10.*alphaN*log10(distance);
+        PL_UAV = pathLossUAV(FSPL,probabilityLoSUAV,pathLoss_LOS,pathLoss_NLOS);
 
         % STEP 2: GET RECEIVED POWER AT EACH UE
-        fading = nakagami(1, numUE);
-        gain = 20; % Assuming directional antenna gain to be 10 (dBm)
+        fading = nakagami(uNLoS, numUE);
+        gain = dBmTodB(40); % Assuming directional antenna gain to be 20 (dBm)
         receivedPowers(:,3) = receivedPower(PtMBS, gain, fading, PL_UAV(:,1));
 
         % STEP 3: CHECK RECEIVED POWER AGAINST THRESHOLD
@@ -127,14 +125,92 @@ for i=1:iterations
     %% GET MAX POWER AT EACH UE AND CORRESPONDING BS
     userBSAssociation = containers.Map;
     [bestPower, bestBS] = max(receivedPowers, [], 2);
-    userBSAssociation('MBS') = positionUE(bestBS==1, :);
-    userBSAssociation('SC') = positionUE(bestBS==2, :);
-    userBSAssociation('UAV') = positionUE(bestBS==3, :);
+    userBSAssociation('UE-MBS') = positionUE(bestBS==1, :);
+    userBSAssociation('UE-SC') = positionUE(bestBS==2, :);
+    userBSAssociation('UE-UAV') = positionUE(bestBS==3, :);
+    userBSAssociation('MBS') = positionStations('MBS');
+    userBSAssociation('SC') = positionStations('SC');
+    userBSAssociation('UAV') = positionStations('UAV');
     
-    plotEquipment(userBSAssociation, 0);
+    assocRatio = containers.Map;
+    assocRatio('MBS') = size(userBSAssociation('UE-MBS'),1)/numUE;
+    assocRatio('SC') = size(userBSAssociation('UE-SC'),1)/numUE;
+    assocRatio('UAV') = size(userBSAssociation('UE-UAV'),1)/numUE;
     
+    out = sprintf('\n-----Association Ratio @ hUAV: %f\talpha: %f------\nMBS: %f\nSC: %f\nUAV: %f\nUE: %f\n',...
+                                                          hUAV,...
+                                                          alpha,...
+                                                          assocRatio('MBS'),...
+                                                          assocRatio('SC'),...
+                                                          assocRatio('UAV'),...
+                                                          numUE);
+    disp (out);                   
+    %plotEquipment(userBSAssociation, 0);
+    
+    %% RATE COVERAGE VS RATE THRESHOLD
+    noisePower = containers.Map;
+    observedSINR = zeros(numUE, 3);
+    dataRates = zeros(numUE, 3);
+    
+    noisePower('MBS-UE') = noise(bMBS, NF);
+    noisePower('SC-UE') = noise(bSC, NF);
+    noisePower('UAV-UE') = noise(bUAV, NF);
+    
+    % Get SINR
+    for j = 1:1:numUE
+        observedSINR(j,1) = SINR(receivedPowers(j,1), ...
+                                      receivedPowers([1:j-1 j+1:end],[1,3]),...
+                                      noisePower('MBS-UE'));
+                                  
+        observedSINR(j,2) = SINR(receivedPowers(j,2), ...
+                                      receivedPowers([1:j-1 j+1:end],2),...
+                                      noisePower('SC-UE'));
+                                  
+        observedSINR(j,3) = SINR(receivedPowers(j,3), ...
+                                      receivedPowers([1:j-1 j+1:end],[1,3]),...
+                                      noisePower('UAV-UE'));                          
+    end
+    
+    % Get Data Rate
+    numAssocUE = size(userBSAssociation('UE-MBS'), 1);
+    if numAssocUE > 0
+        dataRates(:,1) = dataRate(alpha, bMBS, numAssocUE, observedSINR(:,1));
+    end
+    numAssocUE = size(userBSAssociation('UE-SC'), 1);
+    if numAssocUE > 0
+        dataRates(:,2) = dataRate(alpha, bSC, numAssocUE, observedSINR(:,2));
+    end
+    numAssocUE = size(userBSAssociation('UE-UAV'), 1);
+    if numAssocUE > 0
+        dataRates(:,3) = dataRate(alpha, bUAV, numAssocUE, observedSINR(:,3));
+    end
+    
+    % Get Data Rate coverage
+    rateCoverage = zeros(iterations, 1);
+    dataRates = reshape(dataRates, size(dataRates,1)*3,1);
+    rateCoverage(i) = (length(dataRates(dataRates>=i))/...
+                    length(dataRates));
+%     ratesBS = dataRates(:,1);
+%     rateCoverage(i,1) = (length(ratesBS(ratesBS >= rateThreshold)))...
+%                           /length(ratesBS);
+%     
+%     ratesBS = dataRates(:,2);
+%     rateCoverage(i,2) = (length(ratesBS(ratesBS >= rateThreshold)))...
+%                           /length(ratesBS);    
+%                       
+%     ratesBS = dataRates(:,3);
+%     rateCoverage(i,3) = (length(ratesBS(ratesBS >= rateThreshold)))...
+%                           /length(ratesBS);                  
+                      
 end
 
+figure('Name', 'Rate Coverage');
+plot(rateRange, rateCoverage, 'b-');
+%hold on
+%plot(rateRange, rateCoverage(:,2), 'r-');
+%hold on
+%plot(rateRange, rateCoverage(:,3), 'k-');
+%hold off
 % average = sum./iterations;
 % out = sprintf('-----Average-----\nMBS: %f\nSC: %f\nUAV: %f\nUE: %f\n', average(1),...
 %                                                                average(2),...

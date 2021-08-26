@@ -1,4 +1,4 @@
 function [gain] = gain(y,omega)
-gain=y/(omega^2);
+gain = 10.*log10(y/(omega^2));
 end
 

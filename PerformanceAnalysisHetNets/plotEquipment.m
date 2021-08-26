@@ -7,7 +7,7 @@ function [] = plotEquipment(dictPos, plotDifferent)
 %  plotDifferent: Plots every element on same scatter plot if 0. Plots on
 %                 different figures if 1.
 %% RETURNS:
-%  No output values. Plots ever element on the same scatter currently
+%  No output values.
 %% IMPLEMENTATION
 plotShapes = ["ko", "r*", "bx", "md", "g+", "ys", "c^"];
 keys = dictPos.keys;
@@ -15,7 +15,7 @@ if plotDifferent
     for i = 1:size(dictPos, 1) 
         key = keys{i};
         figure('Name', key);
-        pos = cell2mat(dictPos(key));
+        pos = dictPos(key);
         scatter(pos(:,1), pos(:,2), plotShapes(i));
         hold on
         legend(key);

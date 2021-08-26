@@ -1,5 +1,9 @@
 function [SINR] = SINR(powerReceived,interference,noise)
-sumInterferences = sum(interference,[1,1000]);
-SINR = powerReceived / (sumInterferences + noise^2);
+interference = dBtoWatts(interference);
+powerReceived = dBtoWatts(powerReceived);
+noise = dBtoWatts(noise);
+sumInterferences = sum(interference, 'all');
+SINR = powerReceived./(sumInterferences + noise.^2);
+%SINR = 10.*log10(SINR);
 end
 
