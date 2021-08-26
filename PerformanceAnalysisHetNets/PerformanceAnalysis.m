@@ -1,6 +1,7 @@
 clc; close all; clear;
 % DEFINE VARIABLES
 iterations = 300;
+rateCoverage = zeros(iterations, 1);
 sum = zeros(4,1);
 
 % DEFINING PARAMETRES
@@ -186,7 +187,6 @@ for i=1:iterations
     end
     
     % Get Data Rate coverage
-    rateCoverage = zeros(iterations, 1);
     dataRates = reshape(dataRates, size(dataRates,1)*3,1);
     rateCoverage(i) = (length(dataRates(dataRates>=i))/...
                     length(dataRates));
