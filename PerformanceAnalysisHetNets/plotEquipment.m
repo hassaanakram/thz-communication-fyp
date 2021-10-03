@@ -1,4 +1,4 @@
-function [] = plotEquipment(dictPos, plotDifferent)
+function [] = plotEquipment(dictPos, posBuilds, plotDifferent)
 %% INPUT ARGS:
 %  dictPos: Dictionary type object with positions of each type of BS or UE.
 %           The function expects the positions of base stations/UE to be stored as
@@ -22,6 +22,13 @@ if plotDifferent
     end
 else
     figure;
+    for i = 1:size(posBuilds, 2)
+        build = posBuilds{i};
+        build = polyshape(build);
+        plot(build);
+        hold on
+    end
+    
     for i = 1:size(dictPos, 1)
         key = keys{i};
         
@@ -29,10 +36,10 @@ else
         if size(pos,2) ~= 2
             continue
         end
-        scatter(pos(:,1), pos(:,2), plotShapes(i));
+        scatter(pos(:,1), pos(:,2), plotShapes(i), 'LineWidth', 0.1);
         hold on
     end
-    legend(keys);
+%     legend(keys);
 end
 
 hold off

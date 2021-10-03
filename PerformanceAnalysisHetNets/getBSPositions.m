@@ -12,7 +12,7 @@ end
 % Number of various tier base stations
 numberStations = containers.Map;
 for i = 1:length(types)
-    numberStations(types(i)) = poissrnd(lambdas(i));
+    numberStations(types(i)) = poissrnd(lambdas(i)*(xMax*yMax));
 end
 % Random coordinates of stations. Using cartesian coordinates.
 % x will be sampled between [0, xMax] and y between [0, yMax]
