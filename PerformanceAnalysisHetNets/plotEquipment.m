@@ -42,6 +42,6 @@ else
 %     legend(keys);
 end
 
-hold off
+hold on
 end
 
