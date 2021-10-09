@@ -4,7 +4,7 @@ clc; close all; clear;
 %% Defining system parametres
 fMBS = 2.4E9; fTHz = 0.3E12; fmmWave = 73; % Hz
 bMBS = 20E6; bTHz = 10E9; bmmWave = 2E9; % Hz
-PtMBS = dBmTodB(40); PtTHz = dBmTodB(20); PtmmWave = dBmTodB(30); %dB
+PtMBS = dBmTodB(40); PtTHz = dBmTodB([20,30,40,50,60,70,80,90]); PtmmWave = dBmTodB(30); %dB
 uLoS = 5; uNLoS = 1;
 alphaN = 3.3; % mmWaveNLoS Path loss
 alphaL = 2; % mmWaveLoS Path loss
@@ -58,6 +58,7 @@ sinrTr = 1; % Watt;
 drTr = [10^3, 10^4, 10^8]; % bits per second
 
 for j = 1 : episodes
+    PtTHzEpisode = PtTHz(j);
     biasTHz = 10;%biasTHzRange(j);
     biasmmWave = 10;%biasMMRange(j);
     
@@ -108,7 +109,7 @@ for j = 1 : episodes
                                           L_mmWaveLoS, biasmmWave);
         P_mmWaveNLoS = receivedPowerBiased(PtmmWave, 20, nakagami(4, numUE),...
                                           L_mmWaveNLoS, biasmmWave);
-        P_THz = receivedPowerBiased(PtTHz, 24, nakagami(5.2, numUE),...
+        P_THz = receivedPowerBiased(PtTHzEpisode, 24, nakagami(5.2, numUE),...
                                     L_THz, biasTHz);
 
         % Step - 5: Check max received power per tier for each user
@@ -193,6 +194,7 @@ for j = 1 : episodes
     associationsTier(j, :) = mean(associationsTierIter, 1);
     SINRCoverage(j, :) = mean(SINRCoverageIter, 1);
     dataRateCoverage(j, :) = mean(dataRateCoverageIter, 1);
+    dataRateMeanThz(j) = mean(dataRateIter{3});
 %     for tierIdx = 1 : 3
 %             sinrTier = SINRCoverageIter(tierIdx, :);
 %             SINRCoverage(j, tierIdx) = mean(sinrTier, 2);
@@ -226,3 +228,6 @@ plot(1:8, dataRateCoverage(:, 1),'b-',...
      1:8, dataRateCoverage(:, 3),'g-'...
      )
 legend(["MBS", "mmWave", "THz"]);
+
+figure('Name', 'Data Rate verses Power transmitted');
+plot(PtTHz,dataRateMeanThz)
