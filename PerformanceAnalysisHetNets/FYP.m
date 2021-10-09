@@ -18,8 +18,8 @@ kF = 0.0033; % m^-1
 beta = 3;
 
 % Deployment densities
-lambdaUE = 10; lambdaMBS = 4e-6; lambdaTHz = 40*lambdaMBS; 
-lambdaMM = 20*lambdaMBS;
+lambdaUE = 100; lambdaMBS = 4e-6; lambdaTHz = 20*lambdaMBS; 
+lambdaMM = 10*lambdaMBS;
 %% Deploy the map
 [numBuilds, positionBuilds] = getBuildingCoords('ththr', xMax, yMax);
 % Step - 1: Deploy BS and UE
@@ -55,7 +55,7 @@ dataRateCoverage = zeros(episodes, 3);
 
 Pr = -130; % Receiver sensitivity dB (-100 dBm taken from my cellphone's status)
 sinrTr = 1; % Watt;
-drTr = [10^3, 10^4, 10^9]; % bits per second
+drTr = [10^3, 10^4, 10^8]; % bits per second
 
 for j = 1 : episodes
     biasTHz = 10;%biasTHzRange(j);
@@ -201,24 +201,28 @@ for j = 1 : episodes
 %     end
 end
 
-%for p = 1 : 10
-    %subplot(10,1,p);
-    figure('Name', 'Assoc');
-    plot(1:8, associationsTier(:, 1),'b-',...
-         1:8, associationsTier(:, 2),'r-',...
-         1:8, associationsTier(:, 3),'g-'...
-         )
-     legend(["MBS", "mmWave", "THz"]);
-     figure('Name', 'SINR Converage');
-     plot(1:8, SINRCoverage(:, 1),'b-',...
-         1:8, SINRCoverage(:, 2),'r-',...
-         1:8, SINRCoverage(:, 3),'g-'...
-         )
-     legend(["MBS", "mmWave" "THz"]);
-     figure('Name', 'DR Coverage');
-     plot(1:8, dataRateCoverage(:, 1),'b-',...
-         1:8, dataRateCoverage(:, 2),'r-',...
-         1:8, dataRateCoverage(:, 3),'g-'...
-         )
-     legend(["MBS", "mmWave", "THz"]);
-%end
+% Replacing all NaNs with 0 (NaNs arise due to a division by zero. In our
+% case this happens moslty when the number of UE associated with any tier
+% are zero. 
+associationsTier(isnan(associationsTier)) = 0;
+SINRCoverage(isnan(SINRCoverage)) = 0;
+dataRateCoverage(isnan(dataRateCoverage)) = 0;
+
+figure('Name', 'Assoc');
+plot(1:8, associationsTier(:, 1),'b-',...
+     1:8, associationsTier(:, 2),'r-',...
+     1:8, associationsTier(:, 3),'g-'...
+     )
+legend(["MBS", "mmWave", "THz"]);
+figure('Name', 'SINR Converage');
+plot(1:8, SINRCoverage(:, 1),'b-',...
+     1:8, SINRCoverage(:, 2),'r-',...
+     1:8, SINRCoverage(:, 3),'g-'...
+     )
+legend(["MBS", "mmWave" "THz"]);
+figure('Name', 'DR Coverage');
+plot(1:8, dataRateCoverage(:, 1),'b-',...
+     1:8, dataRateCoverage(:, 2),'r-',...
+     1:8, dataRateCoverage(:, 3),'g-'...
+     )
+legend(["MBS", "mmWave", "THz"]);
