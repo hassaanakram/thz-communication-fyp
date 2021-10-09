@@ -40,32 +40,36 @@ fprintf('Calculating Probabilites\n');
 fprintf('MBS: %d\t mmWave: %d\tTHz: %d\n', numStations('MBS'), numStations('mmWave'), numStations('THz'));  
 fprintf('Number of UE: %d\n', numUE);
 %% Simulation
+clc; close;
 iterations = 300;
 episodes = 8;
 
 biasTHzRange = dBmTodB(linspace(10,50,episodes));
 biasMMRange = dBmTodB(linspace(10,30,episodes));
 
-associationsTierIter = zeros(iterations, 4);
-associationsTier = zeros(episodes, 4);
 bandwidthTier = zeros(3, 1);
-SINRReceivedIter = cell(3, 1);
-dataRatesIter = cell(3, 1);
+
+associationsTier = zeros(episodes, 4);
 SINRCoverage = zeros(episodes, 3);
 dataRateCoverage = zeros(episodes, 3);
 
 Pr = -130; % Receiver sensitivity dB (-100 dBm taken from my cellphone's status)
 sinrTr = 1; % Watt;
-drTr = [10^3, 10^4, 10^6];
+drTr = [10^3, 10^4, 10^9]; % bits per second
 
 for j = 1 : episodes
-    biasTHz = biasTHzRange(j);
-    biasmmWave = biasMMRange(j);
+    biasTHz = 10;%biasTHzRange(j);
+    biasmmWave = 10;%biasMMRange(j);
+    
+    associationsTierIter = zeros(iterations, 4);
+    SINRCoverageIter = zeros(iterations, 3);
+    dataRateCoverageIter = zeros(iterations, 3);
+    
     for i = 1 : iterations
         fprintf('******Iteration - %d,j - %d******\n', i, j);
-        SINRCoverageIter = cell(3, 1);
-        dataRateCoverageIter = cell(3, 1);
-
+        SINRReceivedIter = cell(3, 1);
+        dataRateIter = cell(3, 1);
+    
         % Step - 3: Calculate PL for each tier.
         fprintf('Calculating Path Losses\n');
         
@@ -100,11 +104,11 @@ for j = 1 : episodes
         
         P_MBS = receivedPowerBiased(PtMBS, 0, nakagami(3, numUE),...
                                     L_MBS, 0);
-        P_mmWaveLoS = receivedPowerBiased(PtmmWave, 10, nakagami(4, numUE),...
+        P_mmWaveLoS = receivedPowerBiased(PtmmWave, 20, nakagami(4, numUE),...
                                           L_mmWaveLoS, biasmmWave);
-        P_mmWaveNLoS = receivedPowerBiased(PtmmWave, 10, nakagami(4, numUE),...
+        P_mmWaveNLoS = receivedPowerBiased(PtmmWave, 20, nakagami(4, numUE),...
                                           L_mmWaveNLoS, biasmmWave);
-        P_THz = receivedPowerBiased(PtTHz, 10, nakagami(5.2, numUE),...
+        P_THz = receivedPowerBiased(PtTHz, 24, nakagami(5.2, numUE),...
                                     L_THz, biasTHz);
 
         % Step - 5: Check max received power per tier for each user
@@ -131,7 +135,6 @@ for j = 1 : episodes
         % All the users with less than the threshold received power are
         % assigned tier 4 (T1: MBS, T2: mmWave, T3: THz, T4: None)
         tier(maxPower < Pr) = 4;
-        % associationsUser{i, :} = tier;
         
         % Calculate assoc. percentage per tier for each iteration
         mbsUE = sum(tier==1);
@@ -153,8 +156,6 @@ for j = 1 : episodes
         bandwidthTier(3,:) = bTHz/thzUE;
         
         % Step - 8: Calculate SINR
-        %SINRReceivedIter = zeros(numUE, 1);
-        %dataRatesIter = zeros(numUE, 1);
         
         for u = 1 : numUE
             tierUE = tier(u);
@@ -176,28 +177,28 @@ for j = 1 : episodes
             SINRReceivedIter{tierUE, :} = [SINRReceivedIter{tierUE,:}; sinrCalc];
             drCalc = dataRate(1, bandwidthTier(tierUE, :),...
                                        1, sinrCalc);
-            dataRatesIter{tierUE, :} = [dataRatesIter{tierUE,:}; drCalc]; 
+            dataRateIter{tierUE, :} = [dataRateIter{tierUE,:}; drCalc]; 
         end
         
         % Calculating SINR and DataRate coverage per tier against
         % thresholds
         for tierIdx = 1 : 3
             sinrTier = SINRReceivedIter{tierIdx, :};
-            SINRCoverageIter{tierIdx, :} = [SINRCoverageIter{tierIdx,:};...
-                              sum(sinrTier > sinrTr)/size(sinrTier,1)];
-            drTier = dataRatesIter{tierIdx, :};
-            dataRateCoverageIter{tierIdx, :} = [dataRateCoverageIter{tierIdx,:};...
-                              sum(drTier > drTr(tierIdx))/size(drTier,1)];
+            SINRCoverageIter(i, tierIdx) = sum(sinrTier > sinrTr)/size(sinrTier,1);
+            drTier = dataRateIter{tierIdx, :};
+            dataRateCoverageIter(i, tierIdx) = sum(drTier > drTr(tierIdx))/size(drTier,1);
         end
     end
     fprintf('Calculating the means over %d iters\n', iterations);
-    associationsTier(j, :) = mean(associationsTierIter,1);
-    for tierIdx = 1 : 3
-            sinrTier = SINRCoverageIter{tierIdx, :};
-            SINRCoverage(j, tierIdx) = mean(sinrTier, 1);
-            drTier = dataRateCoverageIter{tierIdx, :};
-            dataRateCoverage(j, tierIdx) = mean(drTier, 1);
-    end
+    associationsTier(j, :) = mean(associationsTierIter, 1);
+    SINRCoverage(j, :) = mean(SINRCoverageIter, 1);
+    dataRateCoverage(j, :) = mean(dataRateCoverageIter, 1);
+%     for tierIdx = 1 : 3
+%             sinrTier = SINRCoverageIter(tierIdx, :);
+%             SINRCoverage(j, tierIdx) = mean(sinrTier, 2);
+%             drTier = dataRateCoverageIter(tierIdx, :);
+%             dataRateCoverage(j, tierIdx) = mean(drTier, 2);
+%     end
 end
 
 %for p = 1 : 10
