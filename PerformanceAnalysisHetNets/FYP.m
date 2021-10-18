@@ -23,11 +23,10 @@ lambdaUE = 600; lambdaMBS = 4e-6;
 % Deploy UE
 [numUE, positionUE] = getUEPositions(lambdaUE, xMax, yMax);
         
-fprintf('MBS: %d\t mmWave: %d\tTHz: %d\n', numStations('MBS'), numStations('mmWave'), numStations('THz'));  
 fprintf('Number of UE: %d\n', numUE);
 %% Simulation
 clc; close;
-iterations = 5000;
+iterations = 100000;
 
 % Various optimization parameters
 episodesPowerTHz = 5;
@@ -46,23 +45,40 @@ biasMMRange = linspace(10,15,episodesBiasmmWave);
 
 bandwidthTier = zeros(3, 1);
 
-associationsTier = zeros(episodes, 4);
-SINRCoverage = zeros(episodes, 3);
-dataRateCoverage = zeros(episodes, 3);
+% Data structs to store mean results after iterations 
 
+associationsTier = zeros(episodesFactormmWave, episodesFactorTHz, ...
+                         episodesPowermmWave, episodesPowerTHz, ...
+                         episodesBiasmmWave, episodesBiasTHz, 4);
+                     
+SINRCoverage = zeros(episodesFactormmWave, episodesFactorTHz, ...
+                         episodesPowermmWave, episodesPowerTHz, ...
+                         episodesBiasmmWave, episodesBiasTHz, 3);
+                     
+dataRateCoverage = zeros(episodesFactormmWave, episodesFactorTHz, ...
+                         episodesPowermmWave, episodesPowerTHz, ...
+                         episodesBiasmmWave, episodesBiasTHz, 3);
+                     
+rateByPower = zeros(episodesFactormmWave, episodesFactorTHz, ...
+                         episodesPowermmWave, episodesPowerTHz, ...
+                         episodesBiasmmWave, episodesBiasTHz, 1);
 % Thresholds
 Pr = -130; % Receiver sensitivity dB (-100 dBm taken from my cellphone's status)
 sinrTr = 1; % Watt;
 drTr = [10^3, 10^4, 10^8]; % bits per second
 
-for factormmWave = factormmWaveRange
+for counterFactormmWave = 1 : episodesFactormmWave
+    factormmWave = factormmWaveRange(counterFactormmWave);
     lambdammWave = factormmWave * lambdaMBS;
     
-    for factorTHz = factorTHzRange
+    for counterFactorTHz = 1 : episodesFactorTHz
+        factorTHz = factorTHzRange(counterFactorTHz);
         lambdaTHz = factorTHz * lambdaMBS;
+        
         [numStations, positionStations] = getBSPositions(["MBS", "THz", "mmWave"]...
                                                , [lambdaMBS, lambdaTHz, lambdaMM],...
                                                  xMax, yMax);
+                                             
         % Step - 2: Calculate LoS/NLoS probabilites for mmWave and THz
         fprintf('Calculating Probabilites\n');
         [probabilities, tHzBSLoS, mmWaveBSLoS, mmWaveBSNLoS] =...
@@ -73,16 +89,19 @@ for factormmWave = factormmWaveRange
                                       numStations,...
                                       numBuilds);
                                          
-        for biasmmWave = biasmmWaveRange
-            for biasTHz = biasTHzRange
-                for PtmmWave = powermmWaveRange
-                    for PtTHz = powerTHzRange
-                        PtTHzEpisode = PtTHz(counterPTHz);
-
-                        associationsTierIter = zeros(iterations, 4);
-                        SINRCoverageIter = zeros(iterations, 3);
-                        dataRateCoverageIter = zeros(iterations, 3);
-
+        for counterBiasmmWave = 1 : episodesBiasmmWave
+            biasmmWave = biasmmWaveRange(counterBiasmmWave);
+            
+            for counterBiasTHz = 1 : episodesBiasTHz
+                biasTHz = biasTHzRange(counterBiasTHz);
+                
+                for counterPmmWave = 1 : episodesPowermmWave
+                    PtmmWave = powermmWaveRange(counterPmmWave);
+                    
+                    for counterPTHz = 1 : episodesPowerTHz
+                        PtTHz = powerTHzRange(counterPTHz);
+                        
+                        % Random effects loop
                         for i = 1 : iterations
                             fprintf('******Iteration - %d,j - %d******\n', i, counterPTHz);
                             SINRReceivedIter = cell(3, 1);
@@ -126,7 +145,7 @@ for factormmWave = factormmWaveRange
                                                               L_mmWaveLoS, biasmmWave);
                             P_mmWaveNLoS = receivedPowerBiased(PtmmWave, 20, nakagami(4, numUE),...
                                                               L_mmWaveNLoS, biasmmWave);
-                            P_THz = receivedPowerBiased(PtTHzEpisode, 24, nakagami(5.2, numUE),...
+                            P_THz = receivedPowerBiased(PtTHz, 24, nakagami(5.2, numUE),...
                                                         L_THz, biasTHz);
 
                             % Step - 5: Check max received power per tier for each user
@@ -208,47 +227,89 @@ for factormmWave = factormmWaveRange
                             end
                         end
                         fprintf('Calculating the means over %d iters\n', iterations);
-                        associationsTier(counterPTHz, :) = mean(associationsTierIter, 1);
-                        SINRCoverage(counterPTHz, :) = mean(SINRCoverageIter, 1);
-                        dataRateCoverage(counterPTHz, :) = mean(dataRateCoverageIter, 1);
-                        dataRateMeanThz(counterPTHz) = mean(dataRateIter{3});
-                    %     for tierIdx = 1 : 3
-                    %             sinrTier = SINRCoverageIter(tierIdx, :);
-                    %             SINRCoverage(j, tierIdx) = mean(sinrTier, 2);
-                    %             drTier = dataRateCoverageIter(tierIdx, :);
-                    %             dataRateCoverage(j, tierIdx) = mean(drTier, 2);
-                    %     end
+                    
+                        associationsTier(counterFactormmWave, ...
+                                         counterFactorTHz, ...
+                                         counterPmmWave, ...
+                                         counterPTHz, ...
+                                         counterBiasmmWave, ...
+                                         counterBiasTHz, :) = ...
+                                         mean(associationsTierIter, 1);
+                        assocTHz = associationsTier(counterFactormmWave, ...
+                                         counterFactorTHz, ...
+                                         counterPmmWave, ...
+                                         counterPTHz, ...
+                                         counterBiasmmWave, ...
+                                         counterBiasTHz, 3);
+                                     
+                        SINRCoverage(counterFactormmWave, ...
+                                         counterFactorTHz, ...
+                                         counterPmmWave, ...
+                                         counterPTHz, ...
+                                         counterBiasmmWave, ...
+                                         counterBiasTHz, :) = ...
+                                         mean(SINRCoverageIter, 1);
+                                     
+                        dataRateCoverage(counterFactormmWave, ...
+                                         counterFactorTHz, ...
+                                         counterPmmWave, ...
+                                         counterPTHz, ...
+                                         counterBiasmmWave, ...
+                                         counterBiasTHz, :) = ...
+                                         mean(dataRateCoverageIter, 1);
+                                     
+                        dataRateTHz = mean(dataRateIter{3});
+                        powerTHzConsumed = numStations('THz') * PtTHz;
+                        dataRateTHz = dataRateTHz .* assocTHz;
+                        
+                        rateByPower(counterFactormmWave, ...
+                                         counterFactorTHz, ...
+                                         counterPmmWave, ...
+                                         counterPTHz, ...
+                                         counterBiasmmWave, ...
+                                         counterBiasTHz, :) = ...
+                                         dataRateTHz ./ powerTHzConsumed;
+                        
+                        associationsTierIter = zeros(iterations, 4);
+                        SINRCoverageIter = zeros(iterations, 3);
+                        dataRateCoverageIter = zeros(iterations, 3);
+                        
                     end
                 end
             end
         end
     end
 end
-% Replacing all NaNs with 0 (NaNs arise due to a division by zero. In our
-% case this happens moslty when the number of UE associated with any tier
-% are zero. 
-associationsTier(isnan(associationsTier)) = 0;
-SINRCoverage(isnan(SINRCoverage)) = 0;
-dataRateCoverage(isnan(dataRateCoverage)) = 0;
 
-figure('Name', 'Assoc');
-plot(1:8, associationsTier(:, 1),'b-',...
-     1:8, associationsTier(:, 2),'r-',...
-     1:8, associationsTier(:, 3),'g-'...
-     )
-legend(["MBS", "mmWave", "THz"]);
-figure('Name', 'SINR Converage');
-plot(1:8, SINRCoverage(:, 1),'b-',...
-     1:8, SINRCoverage(:, 2),'r-',...
-     1:8, SINRCoverage(:, 3),'g-'...
-     )
-legend(["MBS", "mmWave" "THz"]);
-figure('Name', 'DR Coverage');
-plot(1:8, dataRateCoverage(:, 1),'b-',...
-     1:8, dataRateCoverage(:, 2),'r-',...
-     1:8, dataRateCoverage(:, 3),'g-'...
-     )
-legend(["MBS", "mmWave", "THz"]);
+rateVSPower = rateByPower(1, 1, 1, :, 1, 1);
+figure('Name', 'thz data rate vs thz power at specific lambdas, biases');
+plot(powerTHzRange, rateVSPower);
 
-figure('Name', 'Data Rate verses Power transmitted');
-plot(PtTHz,dataRateMeanThz)
+% % Replacing all NaNs with 0 (NaNs arise due to a division by zero. In our
+% % case this happens moslty when the number of UE associated with any tier
+% % are zero. 
+% associationsTier(isnan(associationsTier)) = 0;
+% SINRCoverage(isnan(SINRCoverage)) = 0;
+% dataRateCoverage(isnan(dataRateCoverage)) = 0;
+% 
+% figure('Name', 'Assoc');
+% plot(1:8, associationsTier(:, 1),'b-',...
+%      1:8, associationsTier(:, 2),'r-',...
+%      1:8, associationsTier(:, 3),'g-'...
+%      )
+% legend(["MBS", "mmWave", "THz"]);
+% figure('Name', 'SINR Converage');
+% plot(1:8, SINRCoverage(:, 1),'b-',...
+%      1:8, SINRCoverage(:, 2),'r-',...
+%      1:8, SINRCoverage(:, 3),'g-'...
+%      )
+% legend(["MBS", "mmWave" "THz"]);
+% figure('Name', 'DR Coverage');
+% plot(1:8, dataRateCoverage(:, 1),'b-',...
+%      1:8, dataRateCoverage(:, 2),'r-',...
+%      1:8, dataRateCoverage(:, 3),'g-'...
+%      )
+% legend(["MBS", "mmWave", "THz"]);
+% 
+% figure('Name', 'Data Rate verses Power transmitted');
+% plot(PtTHz,dataRateMeanThz)
