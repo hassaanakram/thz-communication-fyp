@@ -44,7 +44,7 @@ episodes = 8;
 
 biasTHzRange = dBmTodB(linspace(10,20,episodes));
 biasMMRange = dBmTodB(linspace(10,15,episodes));
-
+PtMBS = 
 bandwidthTier = zeros(3, 1);
 
 associationsTier = zeros(episodes, 4);

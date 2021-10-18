@@ -10,13 +10,14 @@ mmWaveBSNLoS = cell(numUE, 1);
 
 % First, iterate over each user:
 for i = 1 : 1 : numUE
-    str = sprintf('User %d\n', i); disp(str);
+    str = fprintf('User %d\n', i); 
     UE = positionUE(i, :);
     % Second, iterate over each Basestation
     for tier = ["mmWave", "THz"]
         numLoS = 0; numNLoS = 0;
-        for j = 1 : 1 : numStations(tier)
-            BS = positionStations(tier);
+        tier_ = convertStringsToChars(tier);
+        for j = 1 : 1 : numStations(tier_)
+            BS = positionStations(tier_);
             BS = BS(j, :);
             overlap = 0;
             % Then iterate over each building
@@ -55,8 +56,8 @@ for i = 1 : 1 : numUE
             tierIdx = 2;
         end
         
-        probabilities(i, tierIdx, 1) = numLoS/numStations(tier);
-        probabilities(i, tierIdx, 2) = numNLoS/numStations(tier);
+        probabilities(i, tierIdx, 1) = numLoS/numStations(tier_);
+        probabilities(i, tierIdx, 2) = numNLoS/numStations(tier_);
         
         fprintf('NumLoS = %d\nNumNLoS = %d\nPLoS-%s = %d\nPNLoS-%s = %d\n'...
                     ,numLoS, numNLoS, tier...
