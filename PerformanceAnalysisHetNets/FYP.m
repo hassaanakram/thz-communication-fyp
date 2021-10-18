@@ -26,7 +26,7 @@ lambdaUE = 600; lambdaMBS = 4e-6;
 fprintf('Number of UE: %d\n', numUE);
 %% Simulation
 clc; close;
-iterations = 100000;
+iterations = 1e6;
 
 % Various optimization parameters
 episodesPowerTHz = 5;
