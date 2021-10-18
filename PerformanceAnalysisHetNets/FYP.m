@@ -17,33 +17,32 @@ kF = 0.0033; % m^-1
 beta = 3;
 
 % Deployment densities
-lambdaUE = 600;
+lambdaUE = 600; lambdaMBS = 4e-6;
 %% Deploy the map
 [numBuilds, positionBuilds] = getBuildingCoords('ththr', xMax, yMax);
-% Step - 1: Deploy BS and UE
-[numStations, positionStations] = getBSPositions(["MBS", "THz", "mmWave"]...
-                                               , [lambdaMBS, lambdaTHz, lambdaMM],...
-                                                 xMax, yMax);
+% Deploy UE
 [numUE, positionUE] = getUEPositions(lambdaUE, xMax, yMax);
         
-% Step - 2: Calculate LoS/NLoS probabilites for mmWave and THz
-fprintf('Calculating Probabilites\n');
-[probabilities, tHzBSLoS, mmWaveBSLoS, mmWaveBSNLoS] =...
-                                             getProbabilities(positionStations,...
-                                             positionUE,...
-                                             positionBuilds,...
-                                             numUE,...
-                                             numStations,...
-                                             numBuilds);
 fprintf('MBS: %d\t mmWave: %d\tTHz: %d\n', numStations('MBS'), numStations('mmWave'), numStations('THz'));  
 fprintf('Number of UE: %d\n', numUE);
 %% Simulation
 clc; close;
 iterations = 5000;
-episodes = 8;
 
-biasTHzRange = dBmTodB(linspace(10,20,episodes));
-biasMMRange = dBmTodB(linspace(10,15,episodes));
+% Various optimization parameters
+episodesPowerTHz = 5;
+episodesPowermmWave = 5; 
+episodesBiasTHz = 10;
+episodesBiasmmWave = 10;
+episodesFactorTHz = 5;
+episodesFactormmWave = 5;
+
+factorTHzRange = 5 : 1/episodesFactorThz : 40;
+factormmWaveRange = 5 : 1/episodesFactormmWave : 30;
+powermmWaveRange = dBmTodB(linspace(20, 40, episodesPowermmWave));
+powerTHzRange = dBmTodB(linspace(15, 30, episodesPowerTHz));
+biasTHzRange = linspace(5,25,episodesBiasTHz);
+biasMMRange = linspace(10,15,episodesBiasmmWave);
 
 bandwidthTier = zeros(3, 1);
 
@@ -51,156 +50,180 @@ associationsTier = zeros(episodes, 4);
 SINRCoverage = zeros(episodes, 3);
 dataRateCoverage = zeros(episodes, 3);
 
+% Thresholds
 Pr = -130; % Receiver sensitivity dB (-100 dBm taken from my cellphone's status)
 sinrTr = 1; % Watt;
 drTr = [10^3, 10^4, 10^8]; % bits per second
 
-for j = 1 : episodes_power
-    PtTHzEpisode = PtTHz(j);
-    biasTHz = 10;%biasTHzRange(j);
-    biasmmWave = 10;%biasMMRange(j);
+for factormmWave = factormmWaveRange
+    lambdammWave = factormmWave * lambdaMBS;
     
-    associationsTierIter = zeros(iterations, 4);
-    SINRCoverageIter = zeros(iterations, 3);
-    dataRateCoverageIter = zeros(iterations, 3);
-    
-    for i = 1 : iterations
-        fprintf('******Iteration - %d,j - %d******\n', i, j);
-        SINRReceivedIter = cell(3, 1);
-        dataRateIter = cell(3, 1);
-    
-        % Step - 3: Calculate PL for each tier.
-        fprintf('Calculating Path Losses\n');
-        
-        % MBS
-        shadowing = 10.*log10(random('Lognormal', 0, 4, numUE, 1));
-        posBS = positionStations('MBS');
-        distance = getDistance(positionUE, posBS);
-        L_MBS = pathLossMBS(fMBS, beta, distance, shadowing);
+    for factorTHz = factorTHzRange
+        lambdaTHz = factorTHz * lambdaMBS;
+        [numStations, positionStations] = getBSPositions(["MBS", "THz", "mmWave"]...
+                                               , [lambdaMBS, lambdaTHz, lambdaMM],...
+                                                 xMax, yMax);
+        % Step - 2: Calculate LoS/NLoS probabilites for mmWave and THz
+        fprintf('Calculating Probabilites\n');
+        [probabilities, tHzBSLoS, mmWaveBSLoS, mmWaveBSNLoS] =...
+                                      getProbabilities(positionStations,...
+                                      positionUE,...
+                                      positionBuilds,...
+                                      numUE,...
+                                      numStations,...
+                                      numBuilds);
+                                         
+        for biasmmWave = biasmmWaveRange
+            for biasTHz = biasTHzRange
+                for PtmmWave = powermmWaveRange
+                    for PtTHz = powerTHzRange
+                        PtTHzEpisode = PtTHz(counterPTHz);
 
-        % mmWave
-        %posBS = positionStations('mmWave');
-        shadowL = 10.*log10(random('Lognormal', 0, 5.2, numUE, 1));
-        shadowN = 10.*log10(random('Lognormal', 0, 7.2, numUE, 1));
-        pLoS = probabilities(:, 1, 1);
-        pNLoS = probabilities(:, 1, 2);
-        distanceLoS = getDistance(positionUE, mmWaveBSLoS);
-        distanceNLoS = getDistance(positionUE, mmWaveBSNLoS);
-        L_mmWaveLoS = pathLossmmWave(p, alphaL, distanceLoS,...
-                                     shadowL);
-        L_mmWaveNLoS = pathLossmmWave(p, alphaN, distanceNLoS,...
-                                     shadowN);                         
+                        associationsTierIter = zeros(iterations, 4);
+                        SINRCoverageIter = zeros(iterations, 3);
+                        dataRateCoverageIter = zeros(iterations, 3);
 
-        % THz
-        posBS = positionStations('THz');
-        distance = getDistance(positionUE, tHzBSLoS);
-        L_Spread = pathLossSCSpread(fTHz, distance);
-        L_Absorption = pathLossSCAbsorbtion(distance);
-        L_THz = pathLossSC(L_Spread, L_Absorption);
+                        for i = 1 : iterations
+                            fprintf('******Iteration - %d,j - %d******\n', i, counterPTHz);
+                            SINRReceivedIter = cell(3, 1);
+                            dataRateIter = cell(3, 1);
 
-        % Step - 4: Calculate Received powers
-        fprintf('Calculating Received powers\n');
-        
-        P_MBS = receivedPowerBiased(PtMBS, 0, nakagami(3, numUE),...
-                                    L_MBS, 0);
-        P_mmWaveLoS = receivedPowerBiased(PtmmWave, 20, nakagami(4, numUE),...
-                                          L_mmWaveLoS, biasmmWave);
-        P_mmWaveNLoS = receivedPowerBiased(PtmmWave, 20, nakagami(4, numUE),...
-                                          L_mmWaveNLoS, biasmmWave);
-        P_THz = receivedPowerBiased(PtTHzEpisode, 24, nakagami(5.2, numUE),...
-                                    L_THz, biasTHz);
+                            % Step - 3: Calculate PL for each tier.
+                            fprintf('Calculating Path Losses\n');
 
-        % Step - 5: Check max received power per tier for each user
-        fprintf('Calculating association matrix for this iteration\n');
-        
-        maxPowerMBS = max(P_MBS, [], 2);
-        maxPowermmWaveLoS = zeros(numUE, 1);
-        maxPowermmWaveNLoS = zeros(numUE, 1);
-        maxPowerTHz = zeros(numUE, 1);
+                            % MBS
+                            shadowing = 10.*log10(random('Lognormal', 0, 4, numUE, 1));
+                            posBS = positionStations('MBS');
+                            distance = getDistance(positionUE, posBS);
+                            L_MBS = pathLossMBS(fMBS, beta, distance, shadowing);
 
-        for k = 1 : numUE
-            maxPowerTHz(k) = max(P_THz{k}, [], 2);
-            maxPowermmWaveLoS(k) = max(P_mmWaveLoS{k}, [], 2);
-            maxPowermmWaveNLoS(k) = max(P_mmWaveNLoS{k}, [], 2);
-        end
-        
-        maxPowers = [maxPowerMBS, maxPowermmWaveLoS, maxPowermmWaveNLoS, maxPowerTHz];
-        % Step - 6: Based on the max power among all three tiers, associate
-        % users to the best station
-        [maxPower, tier] = max(maxPowers, [], 2);
-        % Joining mmWave LoS and NLoS powers
-        tier(tier == 3) = 2; tier(tier == 4) = 3;
-        
-        % All the users with less than the threshold received power are
-        % assigned tier 4 (T1: MBS, T2: mmWave, T3: THz, T4: None)
-        tier(maxPower < Pr) = 4;
-        
-        % Calculate assoc. percentage per tier for each iteration
-        mbsUE = sum(tier==1);
-        percentage = mbsUE/numUE; % MBS
-        associationsTierIter(i, 1) = percentage;
-        
-        mmWaveUE = sum(tier==2);
-        percentage = mmWaveUE/numUE; % mmWave LoS/nLoS
-        associationsTierIter(i, 2) = percentage;
-        
-        thzUE = sum(tier==3);
-        percentage = thzUE/numUE; % THz
-        associationsTierIter(i, 3) = percentage;
-        clc;
-        
-        % Step - 7: Divide bandwidth
-        bandwidthTier(1,:) = bMBS/mbsUE;
-        bandwidthTier(2,:) = bmmWave/mmWaveUE;
-        bandwidthTier(3,:) = bTHz/thzUE;
-        
-        % Step - 8: Calculate SINR
-        
-        for u = 1 : numUE
-            tierUE = tier(u);
-            if tierUE == 4 % Out of coverage
-                continue;
+                            % mmWave
+                            %posBS = positionStations('mmWave');
+                            shadowL = 10.*log10(random('Lognormal', 0, 5.2, numUE, 1));
+                            shadowN = 10.*log10(random('Lognormal', 0, 7.2, numUE, 1));
+                            pLoS = probabilities(:, 1, 1);
+                            pNLoS = probabilities(:, 1, 2);
+                            distanceLoS = getDistance(positionUE, mmWaveBSLoS);
+                            distanceNLoS = getDistance(positionUE, mmWaveBSNLoS);
+                            L_mmWaveLoS = pathLossmmWave(p, alphaL, distanceLoS,...
+                                                         shadowL);
+                            L_mmWaveNLoS = pathLossmmWave(p, alphaN, distanceNLoS,...
+                                                         shadowN);                         
+
+                            % THz
+                            posBS = positionStations('THz');
+                            distance = getDistance(positionUE, tHzBSLoS);
+                            L_Spread = pathLossSCSpread(fTHz, distance);
+                            L_Absorption = pathLossSCAbsorbtion(distance);
+                            L_THz = pathLossSC(L_Spread, L_Absorption);
+
+                            % Step - 4: Calculate Received powers
+                            fprintf('Calculating Received powers\n');
+
+                            P_MBS = receivedPowerBiased(PtMBS, 0, nakagami(3, numUE),...
+                                                        L_MBS, 0);
+                            P_mmWaveLoS = receivedPowerBiased(PtmmWave, 20, nakagami(4, numUE),...
+                                                              L_mmWaveLoS, biasmmWave);
+                            P_mmWaveNLoS = receivedPowerBiased(PtmmWave, 20, nakagami(4, numUE),...
+                                                              L_mmWaveNLoS, biasmmWave);
+                            P_THz = receivedPowerBiased(PtTHzEpisode, 24, nakagami(5.2, numUE),...
+                                                        L_THz, biasTHz);
+
+                            % Step - 5: Check max received power per tier for each user
+                            fprintf('Calculating association matrix for this iteration\n');
+
+                            maxPowerMBS = max(P_MBS, [], 2);
+                            maxPowermmWaveLoS = zeros(numUE, 1);
+                            maxPowermmWaveNLoS = zeros(numUE, 1);
+                            maxPowerTHz = zeros(numUE, 1);
+
+                            for k = 1 : numUE
+                                maxPowerTHz(k) = max(P_THz{k}, [], 2);
+                                maxPowermmWaveLoS(k) = max(P_mmWaveLoS{k}, [], 2);
+                                maxPowermmWaveNLoS(k) = max(P_mmWaveNLoS{k}, [], 2);
+                            end
+
+                            maxPowers = [maxPowerMBS, maxPowermmWaveLoS, maxPowermmWaveNLoS, maxPowerTHz];
+                            % Step - 6: Based on the max power among all three tiers, associate
+                            % users to the best station
+                            [maxPower, tier] = max(maxPowers, [], 2);
+                            % Joining mmWave LoS and NLoS powers
+                            tier(tier == 3) = 2; tier(tier == 4) = 3;
+
+                            % All the users with less than the threshold received power are
+                            % assigned tier 4 (T1: MBS, T2: mmWave, T3: THz, T4: None)
+                            tier(maxPower < Pr) = 4;
+
+                            % Calculate assoc. percentage per tier for each iteration
+                            mbsUE = sum(tier==1);
+                            percentage = mbsUE/numUE; % MBS
+                            associationsTierIter(i, 1) = percentage;
+
+                            mmWaveUE = sum(tier==2);
+                            percentage = mmWaveUE/numUE; % mmWave LoS/nLoS
+                            associationsTierIter(i, 2) = percentage;
+
+                            thzUE = sum(tier==3);
+                            percentage = thzUE/numUE; % THz
+                            associationsTierIter(i, 3) = percentage;
+                            clc;
+
+                            % Step - 7: Divide bandwidth
+                            bandwidthTier(1,:) = bMBS/mbsUE;
+                            bandwidthTier(2,:) = bmmWave/mmWaveUE;
+                            bandwidthTier(3,:) = bTHz/thzUE;
+
+                            % Step - 8: Calculate SINR
+
+                            for u = 1 : numUE
+                                tierUE = tier(u);
+                                if tierUE == 4 % Out of coverage
+                                    continue;
+                                end
+
+                                % Noise
+                                noiseReceived = noise(bandwidthTier(tierUE, :), NF);
+                                % Powers at all UE except the current one (u)
+                                interferences = maxPower([1:u-1, u+1:end]);
+                                % Tiers of all UE except the current one
+                                tier_ = tier([1:u-1, u+1:end]);
+                                % Powers of all the UE except the current UE and having the
+                                % same tier.
+                                interferences = interferences(tier_ == tierUE);
+                                sinrCalc = SINR(maxPower(u),...
+                                                          interferences, noiseReceived);
+                                SINRReceivedIter{tierUE, :} = [SINRReceivedIter{tierUE,:}; sinrCalc];
+                                drCalc = dataRate(1, bandwidthTier(tierUE, :),...
+                                                           1, sinrCalc);
+                                dataRateIter{tierUE, :} = [dataRateIter{tierUE,:}; drCalc]; 
+                            end
+
+                            % Calculating SINR and DataRate coverage per tier against
+                            % thresholds
+                            for tierIdx = 1 : 3
+                                sinrTier = SINRReceivedIter{tierIdx, :};
+                                SINRCoverageIter(i, tierIdx) = sum(sinrTier > sinrTr)/size(sinrTier,1);
+                                drTier = dataRateIter{tierIdx, :};
+                                dataRateCoverageIter(i, tierIdx) = sum(drTier > drTr(tierIdx))/size(drTier,1);
+                            end
+                        end
+                        fprintf('Calculating the means over %d iters\n', iterations);
+                        associationsTier(counterPTHz, :) = mean(associationsTierIter, 1);
+                        SINRCoverage(counterPTHz, :) = mean(SINRCoverageIter, 1);
+                        dataRateCoverage(counterPTHz, :) = mean(dataRateCoverageIter, 1);
+                        dataRateMeanThz(counterPTHz) = mean(dataRateIter{3});
+                    %     for tierIdx = 1 : 3
+                    %             sinrTier = SINRCoverageIter(tierIdx, :);
+                    %             SINRCoverage(j, tierIdx) = mean(sinrTier, 2);
+                    %             drTier = dataRateCoverageIter(tierIdx, :);
+                    %             dataRateCoverage(j, tierIdx) = mean(drTier, 2);
+                    %     end
+                    end
+                end
             end
-            
-            % Noise
-            noiseReceived = noise(bandwidthTier(tierUE, :), NF);
-            % Powers at all UE except the current one (u)
-            interferences = maxPower([1:u-1, u+1:end]);
-            % Tiers of all UE except the current one
-            tier_ = tier([1:u-1, u+1:end]);
-            % Powers of all the UE except the current UE and having the
-            % same tier.
-            interferences = interferences(tier_ == tierUE);
-            sinrCalc = SINR(maxPower(u),...
-                                      interferences, noiseReceived);
-            SINRReceivedIter{tierUE, :} = [SINRReceivedIter{tierUE,:}; sinrCalc];
-            drCalc = dataRate(1, bandwidthTier(tierUE, :),...
-                                       1, sinrCalc);
-            dataRateIter{tierUE, :} = [dataRateIter{tierUE,:}; drCalc]; 
-        end
-        
-        % Calculating SINR and DataRate coverage per tier against
-        % thresholds
-        for tierIdx = 1 : 3
-            sinrTier = SINRReceivedIter{tierIdx, :};
-            SINRCoverageIter(i, tierIdx) = sum(sinrTier > sinrTr)/size(sinrTier,1);
-            drTier = dataRateIter{tierIdx, :};
-            dataRateCoverageIter(i, tierIdx) = sum(drTier > drTr(tierIdx))/size(drTier,1);
         end
     end
-    fprintf('Calculating the means over %d iters\n', iterations);
-    associationsTier(j, :) = mean(associationsTierIter, 1);
-    SINRCoverage(j, :) = mean(SINRCoverageIter, 1);
-    dataRateCoverage(j, :) = mean(dataRateCoverageIter, 1);
-    dataRateMeanThz(j) = mean(dataRateIter{3});
-%     for tierIdx = 1 : 3
-%             sinrTier = SINRCoverageIter(tierIdx, :);
-%             SINRCoverage(j, tierIdx) = mean(sinrTier, 2);
-%             drTier = dataRateCoverageIter(tierIdx, :);
-%             dataRateCoverage(j, tierIdx) = mean(drTier, 2);
-%     end
 end
-
 % Replacing all NaNs with 0 (NaNs arise due to a division by zero. In our
 % case this happens moslty when the number of UE associated with any tier
 % are zero. 
