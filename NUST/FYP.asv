@@ -20,7 +20,7 @@ kF = 0.0033; % m^-1
 beta = 3;
 
 % Deployment densities
-lambdaUE = 50; 
+lambdaUE = 15; 
 lambdaMBS = 2e-6;
 %% Deploy the map
 [numBuilds, positionBuilds] = getBuildingCoords('ththr', xMax, yMax, 3, 38, 39);
@@ -177,7 +177,7 @@ for counterFactormmWave = 1 : episodesFactormmWave
                             
                             for k = 1 : numUE
                                 [maxPowerTHz(k), idxBestBSTier(k, 3)] = max(P_THz{k}, [], 2);
-                                [maxPowermmWave(k), idxBestBSTier(k, 2)] ...
+                                [maxPowermmWave(k), idxBestTier(k, 2)] ...
                                     = max(P_mm{k}, [], 2);
                                 %[maxPowermmWaveLoS(k), idxBestBSTier(k, 2)] = ...
                                 %                max(P_mmWaveLoS{k}, [], 2);
